@@ -1,23 +1,35 @@
-# Survival_analysis
+# Survival Analysis Project:
 
-# Load necessary libraries
-library(tidyverse)
-library(janitor)
-library(survival)
-library(survminer)
-library(tidyquant)  # For theme_tq
-library(patchwork)  # For combining plots
+Methodologies and Decisions
+1. Objective and Data Preparation
+Objective:
+The goal of this project is to analyze customer churn using survival analysis techniques. We aim to:
 
-# Load and prepare the data
-customer_churn_tbl <- read_csv("G:/Other computers/My laptop/Oubaid/Documents/France/Alternance/DSTI/Survival Analysis/customer_churn.csv") %>%
-    clean_names() %>%
-    mutate(churn = ifelse(churn == "Yes", 1, 0)) %>%
-    mutate_if(is.character, as_factor)
+Estimate survival functions for different customer groups.
+Compare survival functions across multiple groups.
+Perform a Cox proportional hazards regression to explore the impact of different factors on survival.
+Data Preparation:
 
-# Nonparametric estimation of survival for one or more groups
+Data Source: Customer churn data is loaded from a CSV file.
+Data Cleaning:
+Columns are standardized using clean_names() from the janitor package to ensure consistent naming.
+The churn column is converted to binary format (1 for "Yes" and 0 for "No") for analysis.
+Character columns are converted to factors to facilitate categorical analysis.
+2. Nonparametric Estimation of Survival
+Kaplan-Meier Estimator:
+The Kaplan-Meier estimator is used to estimate the survival function from lifetime data. It is a nonparametric method that provides an estimate of the probability of surviving past certain time points, considering censoring.
+
+Implementation:
+```{r}
 sfit <- survfit(Surv(tenure, churn) ~ contract, data = customer_churn_tbl)
+```
 
-# Kaplan-Meier survival curves with tidyquant theme
+Surv(tenure, churn): Creates a survival object where tenure represents the time to event and churn indicates whether the event (churn) occurred.
+~ contract: Stratifies survival curves by the contract variable to estimate survival functions for each contract type.
+Visualization:
+
+Kaplan-Meier Plot with Tidyquant Theme:
+```{r}
 g1 <- ggsurvplot(
     sfit,
     conf.int = TRUE,
@@ -27,8 +39,18 @@ g1 <- ggsurvplot(
     title = "Customer Churn Survival Plot"
 )
 print(g1)
+```
+![image](https://github.com/user-attachments/assets/fba91c8d-b3f4-4238-adc8-8e8aa085c271)
 
-# Adding a risk table to the Kaplan-Meier plot
+This plot shows survival curves for different contract types with confidence intervals. The tidyquant theme is applied for a clean, professional look.
+It Provides a clear picture of survival probabilities across different contract types, indicating varying levels of customer retention.
+
+3. Nonparametric Comparison of Groups
+Adding a Risk Table:
+A risk table provides additional insight by showing the number of subjects at risk at different time points.
+
+Implementation:
+```{r}
 g2 <- ggsurvplot(
     sfit,
     conf.int = TRUE,
@@ -38,8 +60,14 @@ g2 <- ggsurvplot(
     palette = c("#E69F00", "#56B4E9", "#009E73"),
     title = "Customer Churn Survival Plot with Risk Table"
 )
+```
+![image](https://github.com/user-attachments/assets/afa93c31-7a71-4b40-9105-961b6612ea62)
 
-# Customize the plot and risk table
+risk.table = TRUE: Adds a table below the survival plot showing the number of individuals at risk at different time points.
+The table enhances the Kaplan-Meier plot by showing the number of customers at risk, adding valuable context to the survival analysis.
+
+Customization and Combination:
+```{r}
 g2_plot <- g2$plot +
     labs(title = "Customer Churn Survival Plot")
 
@@ -47,17 +75,21 @@ g2_table <- g2$table +
     theme_tq() +
     theme(panel.grid = element_blank())
 
-# Combine plot and risk table
 combined_plot <- g2_plot / g2_table + plot_layout(heights = c(2, 1))
 print(combined_plot)
+```
+![image](https://github.com/user-attachments/assets/e8eeb487-343b-43a3-9338-f83c050b98e6)
 
-# Check levels of gender to adjust color palette
+The plot and risk table are customized and combined using the patchwork package for comprehensive visualization.
+
+4. Faceting by Groups
+Faceting:
+Faceting allows for the comparison of survival curves across different subgroups, such as gender, by creating separate panels.
+
+Implementation:
+```{r}
 unique_gender_levels <- unique(customer_churn_tbl$gender)
 num_gender_levels <- length(unique_gender_levels)
-print(num_gender_levels)  # Print number of levels
-
-# Kaplan-Meier survival estimate with faceting by gender
-# Adjust the palette size based on the number of gender levels
 palette_colors <- RColorBrewer::brewer.pal(n = num_gender_levels, name = "Set1")
 
 g3 <- ggsurvplot_facet(
@@ -71,15 +103,56 @@ g3 <- ggsurvplot_facet(
     title = "Survival Plot by Customer Gender"
 )
 print(g3)
+```
+![image](https://github.com/user-attachments/assets/e9359e28-933b-4768-a1e5-407252655043)
 
-# Semi-parametric Cox regression
+facet.by = "gender": Creates separate panels for each gender, facilitating a comparison of survival functions by gender.
+It allows for comparison of survival functions between genders, revealing potential differences in churn rates based on gender.
+
+5. Semi-Parametric Cox Regression
+Cox Proportional Hazards Model:
+The Cox model is a semi-parametric method used to explore the relationship between survival time and one or more predictor variables. It provides estimates of hazard ratios, which indicate the effect of covariates on the hazard or risk of the event occurring.
+
+Implementation:
+```{r}
 cox_model <- coxph(Surv(tenure, churn) ~ contract + gender, data = customer_churn_tbl)
-
-# Summary of the Cox model
 summary(cox_model)
+```
+Call:
+coxph(formula = Surv(tenure, churn) ~ contract + gender, data = customer_churn_tbl)
 
-# Representation graph of the Cox model
-# Plotting survival curves based on Cox model
+  n= 7043, number of events= 1869 
+
+                     coef exp(coef) se(coef)       z
+contractOne year -2.19184   0.11171  0.08346 -26.261
+contractTwo year -4.22809   0.01458  0.15637 -27.039
+genderMale       -0.04787   0.95325  0.04632  -1.034
+                 Pr(>|z|)    
+contractOne year   <2e-16 ***
+contractTwo year   <2e-16 ***
+genderMale          0.301    
+---
+Signif. codes:  
+0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+                 exp(coef) exp(-coef) lower .95
+contractOne year   0.11171      8.952   0.09485
+contractTwo year   0.01458     68.586   0.01073
+genderMale         0.95325      1.049   0.87052
+                 upper .95
+contractOne year   0.13156
+contractTwo year   0.01981
+genderMale         1.04385
+
+Concordance= 0.775  (se = 0.004 )
+Likelihood ratio test= 2620  on 3 df,   p=<2e-16
+Wald test            = 1281  on 3 df,   p=<2e-16
+Score (logrank) test = 2347  on 3 df,   p=<2e-16
+
+coxph(Surv(tenure, churn) ~ contract + gender): Models the effect of contract and gender on the risk of churn.
+
+Representation Graph:
+```{r}
 g4 <- ggsurvplot(
     survfit(cox_model),
     conf.int = TRUE,
@@ -89,3 +162,12 @@ g4 <- ggsurvplot(
     title = "Survival Curves from Cox Model"
 )
 print(g4)
+```
+![image](https://github.com/user-attachments/assets/9123a653-c8c2-4051-b4ff-bed64eee9231)
+
+The survival curves derived from the Cox model provide insight into the adjusted survival probabilities considering the covariates.
+It quantifies the impact of contract type and gender on churn risk, offering a more detailed understanding of factors influencing customer retention.
+
+Conclusion
+
+This project utilizes survival analysis techniques to understand customer churn. Nonparametric methods, such as the Kaplan-Meier estimator, provide insights into survival functions and group comparisons. The Cox proportional hazards model offers a deeper understanding of how various factors affect survival. The visualizations are customized for clarity and insight, using modern themes and plotting techniques to present the findings effectively.
