@@ -117,7 +117,7 @@ Implementation:
 ```{r}
 cox_model <- coxph(Surv(tenure, churn) ~ contract + gender, data = customer_churn_tbl)
 summary(cox_model)
-```
+
 Call:
 coxph(formula = Surv(tenure, churn) ~ contract + gender, data = customer_churn_tbl)
 
@@ -148,7 +148,7 @@ Concordance= 0.775  (se = 0.004 )
 Likelihood ratio test= 2620  on 3 df,   p=<2e-16
 Wald test            = 1281  on 3 df,   p=<2e-16
 Score (logrank) test = 2347  on 3 df,   p=<2e-16
-
+```
 coxph(Surv(tenure, churn) ~ contract + gender): Models the effect of contract and gender on the risk of churn.
 
 Representation Graph:
